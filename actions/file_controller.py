@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/file_controller.py
+
+Purpose: Action/tool module (file_controller). Implements the file controller capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 # actions/file_controller.py
 # File management — create, delete, move, rename, list, find, organize
 

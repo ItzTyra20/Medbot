@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — agent/task_queue.py
+
+Purpose: Maintains queued tasks and their execution state for multi-step agent work.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import threading
 import time
 import uuid

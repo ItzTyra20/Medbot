@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/code_helper.py
+
+Purpose: Action/tool module (code_helper). Implements the code helper capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 # actions/code_helper.py
 # AI-powered code assistant — writes, edits, explains, runs, builds, debugs, and optimizes code.
 #

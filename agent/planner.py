@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — agent/planner.py
+
+Purpose: Breaks a complex user request into an ordered plan of smaller actions.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import json
 import re
 import sys

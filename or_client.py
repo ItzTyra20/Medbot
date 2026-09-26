@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — or_client.py
+
+Purpose: OpenRouter API client. Loads credentials, sends text/vision requests, and manages model selection, retries, and rate-limit handling.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import json
 import sys
 import time

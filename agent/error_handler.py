@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — agent/error_handler.py
+
+Purpose: Centralizes handling and reporting of errors raised during agent operations.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import json
 import re
 import sys

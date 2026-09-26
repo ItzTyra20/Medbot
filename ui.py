@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — ui.py
+
+Purpose: Desktop user interface built with PyQt6. Defines the window, widgets, styling, and UI signals used to display and control the assistant.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 from __future__ import annotations
 
 import json

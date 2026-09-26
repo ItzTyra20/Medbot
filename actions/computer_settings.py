@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/computer_settings.py
+
+Purpose: Action/tool module (computer_settings). Implements the computer settings capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 #computer_settings.py
 import json
 import re

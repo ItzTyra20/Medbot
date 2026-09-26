@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — memory/memory_manager.py
+
+Purpose: Conversation memory utilities: load and update stored user preferences/facts and prepare memory for the assistant prompt.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import json
 import re
 from datetime import datetime

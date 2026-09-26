@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — memory/config_manager.py
+
+Purpose: Reads and writes configuration values used by the memory subsystem.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import json
 import sys
 from pathlib import Path

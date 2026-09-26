@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/dev_agent.py
+
+Purpose: Action/tool module (dev_agent). Implements the dev agent capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import subprocess
 import sys
 import json

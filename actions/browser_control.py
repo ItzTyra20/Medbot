@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/browser_control.py
+
+Purpose: Action/tool module (browser_control). Implements the browser control capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import asyncio
 import threading
 import concurrent.futures

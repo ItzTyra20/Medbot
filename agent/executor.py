@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — agent/executor.py
+
+Purpose: Executes planned actions and coordinates calls to the available action/tool modules.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import json
 import re
 import sys

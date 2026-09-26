@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/weather_report.py
+
+Purpose: Action/tool module (weather_report). Implements the weather report capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 # actions/weather_report.py
 
 import webbrowser

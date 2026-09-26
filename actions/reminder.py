@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/reminder.py
+
+Purpose: Action/tool module (reminder). Implements the reminder capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 # actions/reminder.py
 
 import subprocess

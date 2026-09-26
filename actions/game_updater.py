@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/game_updater.py
+
+Purpose: Action/tool module (game_updater). Implements the game updater capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 import os
 import re
 import sys

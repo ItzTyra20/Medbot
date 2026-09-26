@@ -1,3 +1,12 @@
+"""
+COMMENTED PROJECT COPY — actions/youtube_video.py
+
+Purpose: Action/tool module (youtube_video). Implements the youtube video capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
 #youtube_video.py
 import json
 import re

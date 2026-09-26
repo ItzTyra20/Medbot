@@ -1,4 +1,13 @@
 """
+COMMENTED PROJECT COPY — actions/file_processor.py
+
+Purpose: Action/tool module (file_processor). Implements the file processor capability that can be invoked by the main assistant or agent.
+
+The comments/docstrings in this copy are explanatory. Keep API credentials private;
+configure your own keys locally and never commit config/api_keys.json.
+"""
+
+"""
 file_processor.py — JARVIS Universal File Processor
 
 Supported types:
