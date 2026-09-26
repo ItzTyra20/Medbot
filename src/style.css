@@ -1,0 +1,31 @@
+* { box-sizing: border-box; }
+:root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172321; background: #f2f6f5; }
+body { margin: 0; }
+.shell { max-width: 900px; margin: 0 auto; padding: 32px 20px 48px; }
+header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.logo { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 15px; background: #0e766e; color: white; font-weight: 800; }
+h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.04em; }
+header p, .muted { color: #61716e; margin: 4px 0 0; }
+.pill { margin-left: auto; border-radius: 999px; padding: 7px 12px; font-size: .78rem; background: #e3e9e8; text-transform: capitalize; }
+.pill.listening { background: #d9f5e8; color: #176a45; }
+.pill.speaking { background: #e1e8ff; color: #334e9b; }
+.pill.error { background: #ffe2df; color: #a32d23; }
+.notice { border: 1px solid #f0d9a5; background: #fff8e8; color: #6e531d; padding: 14px 16px; border-radius: 14px; font-size: .9rem; line-height: 1.5; margin-bottom: 20px; }
+.panel, .transcript { background: white; border: 1px solid #e0e9e7; border-radius: 20px; padding: 24px; box-shadow: 0 8px 28px #1c41380a; }
+h2 { margin: 0; font-size: 1.2rem; }
+.controls { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+button { border: 0; border-radius: 12px; padding: 13px 18px; font-weight: 700; cursor: pointer; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.start { background: #0e766e; color: white; }
+.stop { background: #edf1f0; color: #263b37; }
+.error { margin-top: 16px; padding: 12px; border-radius: 10px; background: #fff0ef; color: #9b2820; overflow-wrap: anywhere; }
+.transcripts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+.transcript { min-height: 220px; }
+.transcript-heading { display: flex; align-items: center; gap: 9px; font-weight: 750; border-bottom: 1px solid #edf1f0; padding-bottom: 14px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; }
+.user-dot { background: #6478d3; }
+.ai-dot { background: #0e9b83; }
+.transcript p { white-space: pre-wrap; line-height: 1.6; color: #41524e; }
+.clear { margin-left: auto; padding: 5px 9px; font-size: .75rem; background: #f0f3f2; }
+footer { color: #7b8986; font-size: .8rem; margin-top: 24px; text-align: center; }
+@media (max-width: 650px) { .transcripts { grid-template-columns: 1fr; } .shell { padding: 22px 14px 36px; } .panel, .transcript { padding: 18px; } }
