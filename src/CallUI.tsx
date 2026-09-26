@@ -4,7 +4,7 @@ import "./style.css";
 export type Message = {
   role: "user" | "assistant";
   text: string;
-  /** Seconds since the call started, for the "YOU · 00:12" label. */
+  /** Wall-clock time (ms since epoch) the sentence was spoken, for the "YOU · 2:34:07 PM" label. */
   time?: number;
 };
 
@@ -15,6 +15,15 @@ function formatDuration(totalSeconds: number): string {
     .padStart(2, "0");
   const s = (safe % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+}
+
+/** Formats a wall-clock timestamp (ms since epoch) as e.g. "2:34:07 PM". */
+function formatClockTime(epochMs: number): string {
+  return new Date(epochMs).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 function HeartPulseIcon({ size = 20 }: { size?: number }) {
@@ -282,7 +291,7 @@ export default function CallUI({
                 <div className="message-meta">
                   {message.role === "user" ? "You" : "HealthVoice"}
                   {typeof message.time === "number" && (
-                    <> · {formatDuration(message.time)}</>
+                    <> · {formatClockTime(message.time)}</>
                   )}
                 </div>
                 <div className="message-bubble">{message.text}</div>
