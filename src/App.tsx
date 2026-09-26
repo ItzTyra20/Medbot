@@ -1,13 +1,12 @@
 import { useRef, useState } from "react";
 import { GoogleGenAI, Modality } from "@google/genai";
+import CallUI, { type Message } from "./CallUI";
 
 type Status = "disconnected" | "connecting" | "listening" | "speaking" | "error";
 
-const MODEL = import.meta.env.VITE_GEMINI_LIVE_MODEL || "gemini-2.5-flash-native-audio-preview-12-2025";
-console.log(
-  "Gemini key loaded:",
-  Boolean(import.meta.env.VITE_GEMINI_API_KEY)
-);
+const MODEL =
+  import.meta.env.VITE_GEMINI_LIVE_MODEL ||
+  "gemini-2.5-flash-native-audio-preview-12-2025";
 
 function pcm16ToFloat32(bytes: Uint8Array): Float32Array {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -43,9 +42,17 @@ function floatToPcm16Base64(input: Float32Array): string {
 
 export default function App() {
   const [status, setStatus] = useState<Status>("disconnected");
-  const [userText, setUserText] = useState("");
-  const [assistantText, setAssistantText] = useState("");
+  const [isMuted, setIsMuted] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [pendingUser, setPendingUser] = useState<{ text: string; time: number } | null>(
+    null
+  );
+  const [pendingAssistant, setPendingAssistant] = useState<
+    { text: string; time: number } | null
+  >(null);
   const [error, setError] = useState("");
+  const [callSeconds, setCallSeconds] = useState(0);
+
   const sessionRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -55,19 +62,65 @@ export default function App() {
   const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const liveUserTextRef = useRef("");
   const liveAssistantTextRef = useRef("");
+  const userTurnStartRef = useRef(0);
+  const assistantTurnStartRef = useRef(0);
+  const isMutedRef = useRef(false);
+  const statusRef = useRef<Status>("disconnected");
+  const callStartRef = useRef<number | null>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function setStatusSafe(next: Status) {
+    statusRef.current = next;
+    setStatus(next);
+  }
+
+  function elapsedSeconds(): number {
+    if (!callStartRef.current) return 0;
+    return (Date.now() - callStartRef.current) / 1000;
+  }
+
+  function startCallTimer() {
+    callStartRef.current = Date.now();
+    setCallSeconds(0);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = setInterval(() => {
+      setCallSeconds(elapsedSeconds());
+    }, 1000);
+  }
+
+  function stopCallTimer() {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    callStartRef.current = null;
+    setCallSeconds(0);
+  }
 
   async function start() {
     try {
       setError("");
-      setUserText("");
-      setAssistantText("");
-      setStatus("connecting");
+      setMessages([]);
+      setPendingUser(null);
+      setPendingAssistant(null);
+      liveUserTextRef.current = "";
+      liveAssistantTextRef.current = "";
+      setStatusSafe("connecting");
 
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY. Add it to .env.local and restart Vite.");
+      if (!apiKey) {
+        throw new Error(
+          "Missing VITE_GEMINI_API_KEY. Add it to .env.local and restart Vite."
+        );
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
       streamRef.current = stream;
 
@@ -82,26 +135,63 @@ export default function App() {
           responseModalities: [Modality.AUDIO],
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          systemInstruction: `You are HealthVoice, a friendly general health information assistant. You are not a doctor and do not diagnose, prescribe, or recommend changing medication doses. Ask concise follow-up questions and communicate uncertainty. If a user describes possible emergency symptoms, advise them to contact emergency services immediately. This is a demo, not a substitute for professional medical care. Keep spoken answers concise.`,
+          systemInstruction:
+            "You are HealthVoice, a friendly general health information assistant. You are not a doctor and do not diagnose, prescribe, or recommend changing medication doses. Ask concise follow-up questions and communicate uncertainty. If a user describes possible emergency symptoms, advise them to contact emergency services immediately. This is a demo, not a substitute for professional medical care. Keep spoken answers concise.",
         },
         callbacks: {
-          onopen: () => setStatus("listening"),
+          onopen: () => {
+            startCallTimer();
+            setStatusSafe("listening");
+          },
           onmessage: async (message: any) => {
             const serverContent = message.serverContent;
+
             if (serverContent?.inputTranscription?.text) {
+              if (!liveUserTextRef.current) {
+                userTurnStartRef.current = elapsedSeconds();
+              }
               liveUserTextRef.current += serverContent.inputTranscription.text;
-              setUserText(liveUserTextRef.current);
+              setPendingUser({
+                text: liveUserTextRef.current,
+                time: userTurnStartRef.current,
+              });
             }
             if (serverContent?.outputTranscription?.text) {
-              liveAssistantTextRef.current += serverContent.outputTranscription.text;
-              setAssistantText(liveAssistantTextRef.current);
+              if (!liveAssistantTextRef.current) {
+                assistantTurnStartRef.current = elapsedSeconds();
+              }
+              liveAssistantTextRef.current +=
+                serverContent.outputTranscription.text;
+              setPendingAssistant({
+                text: liveAssistantTextRef.current,
+                time: assistantTurnStartRef.current,
+              });
             }
+
             if (serverContent?.turnComplete) {
-              liveUserTextRef.current += "\n";
-              liveAssistantTextRef.current += "\n";
-              setUserText(liveUserTextRef.current.trim());
-              setAssistantText(liveAssistantTextRef.current.trim());
-              setStatus("listening");
+              const finishedUser = liveUserTextRef.current.trim();
+              const finishedAssistant = liveAssistantTextRef.current.trim();
+              const userTime = userTurnStartRef.current;
+              const assistantTime = assistantTurnStartRef.current;
+
+              setMessages((prev) => {
+                const next = [...prev];
+                if (finishedUser)
+                  next.push({ role: "user", text: finishedUser, time: userTime });
+                if (finishedAssistant)
+                  next.push({
+                    role: "assistant",
+                    text: finishedAssistant,
+                    time: assistantTime,
+                  });
+                return next;
+              });
+
+              liveUserTextRef.current = "";
+              liveAssistantTextRef.current = "";
+              setPendingUser(null);
+              setPendingAssistant(null);
+              setStatusSafe("listening");
             }
 
             const parts = serverContent?.modelTurn?.parts ?? [];
@@ -112,35 +202,40 @@ export default function App() {
               const ctx = audioContextRef.current;
               if (!ctx) continue;
               const audioBuffer = ctx.createBuffer(1, pcm.length, 24000);
-              const safePcm = new Float32Array(pcm);
-              audioBuffer.copyToChannel(safePcm, 0);
+              audioBuffer.copyToChannel(new Float32Array(pcm), 0);
               const source = ctx.createBufferSource();
               source.buffer = audioBuffer;
               source.connect(ctx.destination);
-              const startAt = Math.max(ctx.currentTime, nextPlayTimeRef.current);
+              const startAt = Math.max(
+                ctx.currentTime,
+                nextPlayTimeRef.current
+              );
               source.start(startAt);
               nextPlayTimeRef.current = startAt + audioBuffer.duration;
               activeSourcesRef.current.push(source);
-              setStatus("speaking");
+              setStatusSafe("speaking");
               source.onended = () => {
-                activeSourcesRef.current = activeSourcesRef.current.filter(s => s !== source);
-                if (activeSourcesRef.current.length === 0 && sessionRef.current) setStatus("listening");
+                activeSourcesRef.current = activeSourcesRef.current.filter(
+                  (s) => s !== source
+                );
+                if (
+                  activeSourcesRef.current.length === 0 &&
+                  sessionRef.current
+                ) {
+                  setStatusSafe("listening");
+                }
               };
             }
           },
           onerror: (e: any) => {
             setError(e?.message || "Gemini Live connection error.");
-            setStatus("error");
-            console.error("Gemini Live error:", error);
-            setStatus("error");
+            setStatusSafe("error");
           },
           onclose: () => {
             sessionRef.current = null;
-            if (status !== "error") setStatus("disconnected");
-            console.error("Gemini Live closed:", event);
-            setStatus("disconnected");
-          }
-        }
+            if (statusRef.current !== "error") setStatusSafe("disconnected");
+          },
+        },
       });
       sessionRef.current = session;
 
@@ -151,18 +246,19 @@ export default function App() {
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
       processor.onaudioprocess = (event) => {
-        if (!sessionRef.current) return;
+        if (!sessionRef.current || isMutedRef.current) return;
         const input = event.inputBuffer.getChannelData(0);
         // Gemini Live expects 16-bit PCM. Resample browser audio to 16 kHz.
         const ratio = event.inputBuffer.sampleRate / 16000;
         const outputLength = Math.floor(input.length / ratio);
         const resampled = new Float32Array(outputLength);
-        for (let i = 0; i < outputLength; i++) resampled[i] = input[Math.floor(i * ratio)];
+        for (let i = 0; i < outputLength; i++)
+          resampled[i] = input[Math.floor(i * ratio)];
         sessionRef.current.sendRealtimeInput({
           audio: {
             data: floatToPcm16Base64(resampled),
-            mimeType: "audio/pcm;rate=16000"
-          }
+            mimeType: "audio/pcm;rate=16000",
+          },
         });
       };
       source.connect(processor);
@@ -173,66 +269,87 @@ export default function App() {
       mute.connect(audioContext.destination);
     } catch (e: any) {
       setError(e?.message || String(e));
-      setStatus("error");
+      setStatusSafe("error");
       await stop();
     }
   }
 
   async function stop() {
-    try { processorRef.current?.disconnect(); } catch {}
-    try { sourceRef.current?.disconnect(); } catch {}
+    try {
+      processorRef.current?.disconnect();
+    } catch {}
+    try {
+      sourceRef.current?.disconnect();
+    } catch {}
     processorRef.current = null;
     sourceRef.current = null;
     if (sessionRef.current) {
-      try { sessionRef.current.close(); } catch {}
+      try {
+        sessionRef.current.close();
+      } catch {}
       sessionRef.current = null;
     }
-    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
-    activeSourcesRef.current.forEach(source => { try { source.stop(); } catch {} });
+    activeSourcesRef.current.forEach((source) => {
+      try {
+        source.stop();
+      } catch {}
+    });
     activeSourcesRef.current = [];
     if (audioContextRef.current) {
       await audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
     }
     nextPlayTimeRef.current = 0;
-    setStatus("disconnected");
+    stopCallTimer();
+    setStatusSafe("disconnected");
+    setIsMuted(false);
+    isMutedRef.current = false;
+    setPendingUser(null);
+    setPendingAssistant(null);
   }
 
-  const busy = status === "connecting";
+  function toggleMute() {
+    setIsMuted((prev) => {
+      isMutedRef.current = !prev;
+      return !prev;
+    });
+  }
+
+  const connected = status === "listening" || status === "speaking";
+  const isConnecting = status === "connecting";
+  const isListening = status === "listening";
+
+  // Combine committed history with the turn currently streaming in.
+  const displayMessages: Message[] = [
+    ...messages,
+    ...(pendingUser
+      ? [{ role: "user" as const, text: pendingUser.text, time: pendingUser.time }]
+      : []),
+    ...(pendingAssistant
+      ? [
+          {
+            role: "assistant" as const,
+            text: pendingAssistant.text,
+            time: pendingAssistant.time,
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <main className="shell">
-      <header>
-        <div className="logo">HV</div>
-        <div><h1>HealthVoice</h1><p>Voice-first health information demo</p></div>
-        <span className={`pill ${status}`}>{status}</span>
-      </header>
-      <section className="notice">
-        <strong>Demo only</strong> — Not a medical device or substitute for professional care.
-        Do not share identifying or highly sensitive health information. For an emergency in the U.S., call 911.
-      </section>
-      <section className="panel">
-        <h2>Talk to HealthVoice</h2>
-        <p className="muted">Start a session and speak naturally. Transcriptions appear below as Gemini returns them.</p>
-        <div className="controls">
-          <button className="start" onClick={start} disabled={busy || status === "listening" || status === "speaking"}>
-            {busy ? "Connecting…" : "🎙 Start conversation"}
-          </button>
-          <button className="stop" onClick={stop} disabled={status === "disconnected"}>End session</button>
-        </div>
-        {error && <div className="error">{error}</div>}
-      </section>
-      <section className="transcripts">
-        <article className="transcript">
-          <div className="transcript-heading"><span className="dot user-dot" /> You <button onClick={() => {liveUserTextRef.current=""; setUserText("");}} className="clear">Clear</button></div>
-          <p>{userText || "Your speech transcription will appear here…"}</p>
-        </article>
-        <article className="transcript">
-          <div className="transcript-heading"><span className="dot ai-dot" /> HealthVoice</div>
-          <p>{assistantText || "The assistant's spoken response transcription will appear here…"}</p>
-        </article>
-      </section>
-      <footer>Prototype • Gemini Live API • Audio stays in this browser session except for processing by Google's API.</footer>
-    </main>
+    <CallUI
+      messages={displayMessages}
+      connected={connected}
+      isConnecting={isConnecting}
+      isListening={isListening}
+      isMuted={isMuted}
+      error={error}
+      callSeconds={callSeconds}
+      onStartCall={start}
+      onEndCall={stop}
+      onToggleMute={toggleMute}
+    />
   );
 }
