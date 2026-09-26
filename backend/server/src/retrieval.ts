@@ -7,11 +7,13 @@ export type MedicalSource = {
   publisher: string;
 };
 
+const MEDLINEPLUS_HOST = "medlineplus.gov";
+
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   textNodeName: "#text",
-  removeNSPrefix: true
+  removeNSPrefix: true,
 });
 
 function plainText(value: unknown): string {
@@ -27,7 +29,27 @@ function plainText(value: unknown): string {
     .trim();
 }
 
-export async function retrieveMedicalSources(query: string): Promise<MedicalSource[]> {
+function isTrustedMedlinePlusUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === MEDLINEPLUS_HOST;
+  } catch {
+    return false;
+  }
+}
+
+function getContentValue(contents: any[], name: string): string {
+  const item = contents.find(
+    (content: any) =>
+      String(content?.["@_name"] ?? "").toLowerCase() === name.toLowerCase()
+  );
+
+  return plainText(item?.["#text"] ?? item);
+}
+
+export async function retrieveMedicalSources(
+  query: string
+): Promise<MedicalSource[]> {
   const cleaned = query.trim().slice(0, 180);
   if (!cleaned) return [];
 
@@ -37,25 +59,39 @@ export async function retrieveMedicalSources(query: string): Promise<MedicalSour
   url.searchParams.set("retmax", "5");
   url.searchParams.set("tool", "healthvoice");
 
-  const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-  if (!response.ok) throw new Error(`MedlinePlus returned HTTP ${response.status}`);
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(8000),
+    headers: { Accept: "application/xml,text/xml" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`MedlinePlus returned HTTP ${response.status}`);
+  }
 
   const parsed = parser.parse(await response.text());
   const raw = parsed?.nlmSearchResult?.list?.document;
   const docs = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
 
-  return docs.map((doc: any): MedicalSource => {
-    const contents = Array.isArray(doc.content) ? doc.content : [doc.content].filter(Boolean);
-    const get = (name: string) => {
-      const item = contents.find((c: any) => String(c?.["@_name"] ?? "").toLowerCase() === name.toLowerCase());
-      return plainText(item?.["#text"] ?? item);
-    };
-    const sourceUrl = String(doc["@_url"] ?? "");
-    return {
-      title: get("title"),
-      summary: get("FullSummary").slice(0, 3000),
-      url: sourceUrl,
-      publisher: "MedlinePlus, National Library of Medicine"
-    };
-  }).filter((s: MedicalSource) => s.title && s.url.startsWith("https://medlineplus.gov/") && s.summary);
+  return docs
+    .map((doc: any): MedicalSource => {
+      const rawContents = doc?.content;
+      const contents = Array.isArray(rawContents)
+        ? rawContents
+        : [rawContents].filter(Boolean);
+
+      const sourceUrl = String(doc?.["@_url"] ?? "");
+
+      return {
+        title: getContentValue(contents, "title"),
+        summary: getContentValue(contents, "FullSummary").slice(0, 3000),
+        url: sourceUrl,
+        publisher: "MedlinePlus, National Library of Medicine",
+      };
+    })
+    .filter(
+      (source) =>
+        source.title &&
+        source.summary &&
+        isTrustedMedlinePlusUrl(source.url)
+    );
 }
