@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { GoogleGenAI, Modality } from "@google/genai";
 import CallUI, { type Message } from "./CallUI";
+import { detectEmergency } from "./emergency";
 
 type Status = "disconnected" | "connecting" | "listening" | "speaking" | "error";
 
@@ -52,6 +53,7 @@ export default function App() {
   >(null);
   const [error, setError] = useState("");
   const [callSeconds, setCallSeconds] = useState(0);
+  const [showEmergencyBanner, setShowEmergencyBanner] = useState(false);
 
   const sessionRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -103,6 +105,7 @@ export default function App() {
       setMessages([]);
       setPendingUser(null);
       setPendingAssistant(null);
+      setShowEmergencyBanner(false);
       liveUserTextRef.current = "";
       liveAssistantTextRef.current = "";
       setStatusSafe("connecting");
@@ -155,6 +158,12 @@ export default function App() {
                 text: liveUserTextRef.current,
                 time: userTurnStartRef.current,
               });
+
+              // Deterministic safety net: check the caller's own words as
+              // they stream in, independent of how the model responds.
+              if (detectEmergency(liveUserTextRef.current)) {
+                setShowEmergencyBanner(true);
+              }
             }
             if (serverContent?.outputTranscription?.text) {
               if (!liveAssistantTextRef.current) {
@@ -310,6 +319,10 @@ export default function App() {
     setPendingAssistant(null);
   }
 
+  function dismissEmergencyBanner() {
+    setShowEmergencyBanner(false);
+  }
+
   function toggleMute() {
     setIsMuted((prev) => {
       isMutedRef.current = !prev;
@@ -347,9 +360,11 @@ export default function App() {
       isMuted={isMuted}
       error={error}
       callSeconds={callSeconds}
+      showEmergencyBanner={showEmergencyBanner}
       onStartCall={start}
       onEndCall={stop}
       onToggleMute={toggleMute}
+      onDismissEmergency={dismissEmergencyBanner}
     />
   );
 }

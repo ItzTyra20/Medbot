@@ -84,9 +84,11 @@ type Props = {
   isMuted: boolean;
   error: string;
   callSeconds: number;
+  showEmergencyBanner: boolean;
   onStartCall: () => void;
   onEndCall: () => void;
   onToggleMute: () => void;
+  onDismissEmergency: () => void;
 };
 
 export default function CallUI({
@@ -97,9 +99,11 @@ export default function CallUI({
   isMuted,
   error,
   callSeconds,
+  showEmergencyBanner,
   onStartCall,
   onEndCall,
   onToggleMute,
+  onDismissEmergency,
 }: Props) {
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -124,6 +128,27 @@ export default function CallUI({
 
   return (
     <main className="app-shell">
+      {showEmergencyBanner && (
+        <div className="emergency-banner" role="alert" aria-live="assertive">
+          <div className="emergency-banner-text">
+            <strong>This may be a medical emergency.</strong>
+            <span> Contact emergency services right away.</span>
+          </div>
+          <div className="emergency-banner-actions">
+            <a className="emergency-call-btn" href="tel:911">
+              Call 911
+            </a>
+            <button
+              className="emergency-dismiss-btn"
+              onClick={onDismissEmergency}
+              aria-label="Dismiss emergency notice"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="topbar">
         <div className="brand">
