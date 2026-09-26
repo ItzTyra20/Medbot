@@ -9,6 +9,8 @@ const MODEL =
   import.meta.env.VITE_GEMINI_LIVE_MODEL ||
   "gemini-2.5-flash-native-audio-preview-12-2025";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+
 function pcm16ToFloat32(bytes: Uint8Array): Float32Array {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const samples = new Float32Array(Math.floor(bytes.byteLength / 2));
@@ -39,6 +41,57 @@ function floatToPcm16Base64(input: Float32Array): string {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
   }
   return btoa(binary);
+}
+
+/**
+ * Function-calling declaration for Gemini Live. This is what turns your
+ * MedlinePlus retrieval code from "unused backend logic" into something
+ * Gemini can actually decide to invoke mid-conversation, instead of only
+ * answering from its own training data.
+ */
+const medicalSearchTool = {
+  functionDeclarations: [
+    {
+      name: "search_medical_sources",
+      description:
+        "Look up trusted medical information from MedlinePlus (National Library of Medicine) about a symptom, condition, medication, or health topic. Call this whenever the user asks about a specific condition or symptom and you want to ground your answer in a reputable source instead of relying on general knowledge alone.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          query: {
+            type: "STRING",
+            description:
+              "A short medical search query, e.g. 'chest pain', 'type 2 diabetes symptoms', 'ibuprofen dosage'.",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  ],
+};
+
+/** Called when Gemini invokes the search_medical_sources tool. */
+async function fetchMedicalSources(query: string) {
+  const response = await fetch(`${BACKEND_URL}/api/medical-search`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+  return response.json();
+}
+
+/**
+ * Sends a finished user turn to the backend's deterministic safety/triage
+ * layer. This runs independently of whatever Gemini decides to say, so a
+ * missed model response can't silently skip the emergency check.
+ */
+async function assessTurn(text: string) {
+  const response = await fetch(`${BACKEND_URL}/api/assess`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, includeSources: false }),
+  });
+  return response.json();
 }
 
 export default function App() {
@@ -147,6 +200,30 @@ export default function App() {
             setStatusSafe("listening");
           },
           onmessage: async (message: any) => {
+             // Gemini decided it wants grounded medical info instead of
+            // answering from memory alone. Run the lookup and hand the
+            // result back so it can finish its response with real sources.
+            if (message.toolCall?.functionCalls?.length) {
+              for (const call of message.toolCall.functionCalls) {
+                if (call.name === "search_medical_sources") {
+                  const query = call.args?.query ?? "";
+                  let responsePayload: unknown;
+                  try {
+                    responsePayload = await fetchMedicalSources(query);
+                  } catch {
+                    responsePayload = {
+                      error: "Medical source lookup is temporarily unavailable.",
+                    };
+                  }
+                  sessionRef.current?.sendToolResponse({
+                    functionResponses: [
+                      { id: call.id, name: call.name, response: responsePayload },
+                    ],
+                  });
+                }
+              }
+            }
+
             const serverContent = message.serverContent;
 
             if (serverContent?.inputTranscription?.text) {
@@ -201,6 +278,19 @@ export default function App() {
               setPendingUser(null);
               setPendingAssistant(null);
               setStatusSafe("listening");
+
+              // Deterministic backend check, independent of the client-side
+              // regex backstop above and of whatever Gemini says. If either
+              // layer flags an emergency, the banner shows.
+              if (finishedUser) {
+                assessTurn(finishedUser)
+                  .then((result) => {
+                    if (result?.emergency) setShowEmergencyBanner(true);
+                  })
+                  .catch(() => {
+                    // Backend unreachable — detectEmergency() above still covers this turn.
+                  });
+              }
             }
 
             const parts = serverContent?.modelTurn?.parts ?? [];
