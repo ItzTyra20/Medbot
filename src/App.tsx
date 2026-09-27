@@ -305,6 +305,8 @@ export default function App() {
             }
 
             const serverContent = message.serverContent;
+            console.log("Gemini Live message:", message);
+            console.log("Server content:", serverContent);
 
             if (serverContent?.inputTranscription?.text) {
               if (!liveUserTextRef.current) {
