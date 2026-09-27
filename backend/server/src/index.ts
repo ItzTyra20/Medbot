@@ -175,6 +175,8 @@ app.post("/api/live-token", async (_req, res) => {
             "gemini-3.8-live",
           config: {
             responseModalities: [Modality.AUDIO],
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
           },
         },
       },
