@@ -4,6 +4,7 @@ import "dotenv/config";
 import { retrieveMedicalSources } from "./retrieval.js";
 import { checkSafety } from "./safety.js";
 import { assessTriage } from "./triage.js";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 const app = express();
 const port = Number(process.env.PORT || 3001);
@@ -148,6 +149,57 @@ app.post("/api/triage", (req, res) => {
   return res.json(assessTriage(text, safety));
 });
 
-app.listen(port, () => {
+app.post("/api/live-token", async (_req, res) => {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({
+        error: "Gemini API key is not configured",
+      });
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    const token = await ai.authTokens.create({
+      config: {
+        uses: 1,
+        expireTime: new Date(
+          Date.now() + 30 * 60 * 1000
+        ).toISOString(),
+        newSessionExpireTime: new Date(
+          Date.now() + 60 * 1000
+        ).toISOString(),
+        liveConnectConstraints: {
+          model: process.env.GEMINI_LIVE_MODEL ||
+            "gemini-3.8-live",
+          config: {
+            responseModalities: [Modality.AUDIO],
+          },
+        },
+      },
+    });
+
+    if (!token.name) {
+      return res.status(500).json({
+        error: "Failed to create temporary token",
+      });
+    }
+
+    return res.json({
+      token: token.name,
+      model: process.env.GEMINI_LIVE_MODEL ||
+        "gemini-3.8-live",
+    });
+  } catch (error) {
+    console.error("Live token creation failed:", error);
+
+    return res.status(500).json({
+      error: "Could not create Live API session",
+    });
+  }
+});
+
+app.listen(port, "0.0.0.0", () => {
   console.log(`HealthVoice backend listening on http://localhost:${port}`);
 });

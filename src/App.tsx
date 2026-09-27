@@ -188,12 +188,12 @@ export default function App() {
       liveAssistantTextRef.current = "";
       setStatusSafe("connecting");
 
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      /*const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error(
           "Missing VITE_GEMINI_API_KEY. Add it to .env.local and restart Vite."
         );
-      }
+      }*/
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -209,9 +209,30 @@ export default function App() {
       audioContextRef.current = audioContext;
       await audioContext.resume();
 
-      const ai = new GoogleGenAI({ apiKey });
+      const tokenResponse = await fetch(
+        `${BACKEND_URL}/api/live-token`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!tokenResponse.ok) {
+        throw new Error("Could not obtain a secure Gemini session.");
+      }
+
+      const { token, model } = await tokenResponse.json();
+
+      const ai = new GoogleGenAI({
+        apiKey: token,
+        httpOptions: {
+          apiVersion: "v1alpha",
+        },
+      });
       const session = await ai.live.connect({
-        model: MODEL,
+        model,
         config: {
           responseModalities: [Modality.AUDIO],
           inputAudioTranscription: {},
