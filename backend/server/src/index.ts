@@ -172,7 +172,7 @@ app.post("/api/live-token", async (_req, res) => {
         ).toISOString(),
         liveConnectConstraints: {
           model: process.env.GEMINI_LIVE_MODEL ||
-            "gemini-3.8-live",
+            "gemini-2.5-flash-native-audio-preview-12-2025",
           config: {
             responseModalities: [Modality.AUDIO],
             inputAudioTranscription: {},
@@ -191,7 +191,7 @@ app.post("/api/live-token", async (_req, res) => {
     return res.json({
       token: token.name,
       model: process.env.GEMINI_LIVE_MODEL ||
-        "gemini-3.8-live",
+        "gemini-2.5-flash-native-audio-preview-12-2025",
     });
   } catch (error) {
     console.error("Live token creation failed:", error);

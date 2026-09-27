@@ -387,6 +387,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: auto;
 }
 
 .transcript-header {
