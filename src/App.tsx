@@ -9,7 +9,7 @@ const MODEL =
   import.meta.env.VITE_GEMINI_LIVE_MODEL ||
   "gemini-2.5-flash-native-audio-preview-12-2025";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3001").replace(/\/+$/, "");
 
 function pcm16ToFloat32(bytes: Uint8Array): Float32Array {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
