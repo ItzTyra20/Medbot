@@ -55,7 +55,8 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 22px;
-  min-height: 70vh;
+  height: 100vh;
+  min-height: 0;
 }
 
 /* Emergency safety banner */
@@ -261,7 +262,7 @@ button:focus-visible {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 20px;
-  align-items: flex;
+  align-items: stretch;
   height: 100vh;
   flex: 1;
   min-height: 0;
