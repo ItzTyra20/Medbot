@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./style.css";
 
 export type Message = {
@@ -97,6 +97,9 @@ type Props = {
   /** Short status text shown while/after Gemini looks something up, e.g.
    * "Checking MedlinePlus for..." Null when nothing is happening. */
   toolStatus: string | null;
+  /** Whether the session can currently accept a typed message. */
+  canType: boolean;
+  onSendTypedMessage: (text: string) => void;
   onStartCall: () => void;
   onEndCall: () => void;
   onToggleMute: () => void;
@@ -112,12 +115,29 @@ export default function CallUI({
   error,
   callSeconds,
   showEmergencyBanner,
+  toolStatus,
+  canType,
+  onSendTypedMessage,
   onStartCall,
   onEndCall,
   onToggleMute,
   onDismissEmergency,
 }: Props) {
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const [typedText, setTypedText] = useState("");
+
+  function submitTypedMessage() {
+    if (!typedText.trim() || !canType) return;
+    onSendTypedMessage(typedText);
+    setTypedText("");
+  }
+
+  function handleComposeKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitTypedMessage();
+    }
+  }
 
   // Keep the newest transcript entry visible.
   useEffect(() => {
@@ -271,6 +291,12 @@ export default function CallUI({
             </span>
           </div>
 
+          {toolStatus && (
+            <div className="tool-status" role="status" aria-live="polite">
+              {toolStatus}
+            </div>
+          )}
+
           <div
             className="transcript-messages"
             ref={transcriptRef}
@@ -304,6 +330,29 @@ export default function CallUI({
             <p className="transcript-hint">
               New messages appear here as you speak.
             </p>
+          </div>
+
+          <div className="transcript-compose">
+            <input
+              type="text"
+              className="transcript-input"
+              placeholder={
+                canType ? "Type a message instead of speaking…" : "Start a call to type a message"
+              }
+              value={typedText}
+              onChange={(e) => setTypedText(e.target.value)}
+              onKeyDown={handleComposeKeyDown}
+              disabled={!canType}
+              aria-label="Type a message"
+            />
+            <button
+              type="button"
+              className="transcript-send-btn"
+              onClick={submitTypedMessage}
+              disabled={!canType || !typedText.trim()}
+            >
+              Send
+            </button>
           </div>
         </section>
       </section>

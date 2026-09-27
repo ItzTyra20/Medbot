@@ -230,6 +230,14 @@ export default function App() {
             setStatusSafe("listening");
           },
           onmessage: async (message: any) => {
+            // TEMPORARY DEBUG LOG — remove once you've confirmed tool calls
+            // are arriving. Lets you see in devtools whether Gemini is
+            // invoking search_medical_sources at all, separate from whether
+            // the fetch/UI update afterward works.
+            if (message.toolCall) {
+              console.log("[HealthVoice] toolCall received:", message.toolCall);
+            }
+
             // Gemini decided it wants grounded medical info instead of
             // answering from memory alone. Run the lookup and hand the
             // result back so it can finish its response with real sources.
@@ -465,6 +473,35 @@ export default function App() {
     setPendingAssistant(null);
   }
 
+  /**
+   * Sends typed text as a turn to the Live session. Typed input never goes
+   * through inputAudioTranscription, so it's added to the transcript here
+   * directly, and run through the same emergency/safety checks a spoken
+   * turn gets — a non-verbal user describing symptoms deserves the same
+   * backstop.
+   */
+  function sendTypedMessage(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || !sessionRef.current) return;
+
+    const time = elapsedSeconds();
+    setMessages((prev) => [...prev, { role: "user", text: trimmed, time }]);
+
+    if (detectEmergency(trimmed)) setShowEmergencyBanner(true);
+    assessTurn(trimmed)
+      .then((result) => {
+        if (result?.emergency) setShowEmergencyBanner(true);
+      })
+      .catch(() => {
+        // Backend unreachable; the client-side detectEmergency check above still covers this turn.
+      });
+
+    sessionRef.current.sendClientContent({
+      turns: [{ role: "user", parts: [{ text: trimmed }] }],
+      turnComplete: true,
+    });
+  }
+
   function dismissEmergencyBanner() {
     setShowEmergencyBanner(false);
   }
@@ -508,6 +545,8 @@ export default function App() {
       callSeconds={callSeconds}
       showEmergencyBanner={showEmergencyBanner}
       toolStatus={toolStatus}
+      canType={connected}
+      onSendTypedMessage={sendTypedMessage}
       onStartCall={start}
       onEndCall={stop}
       onToggleMute={toggleMute}

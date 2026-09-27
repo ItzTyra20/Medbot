@@ -477,6 +477,61 @@ button:focus-visible {
   background: var(--bubble-assistant);
 }
 
+.transcript-compose {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.transcript-input {
+  flex: 1;
+  background: var(--panel-inset);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  outline: none;
+}
+
+.transcript-input:focus-visible {
+  border-color: var(--blue);
+}
+
+.transcript-input::placeholder {
+  color: var(--muted);
+}
+
+.transcript-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.transcript-send-btn {
+  border: none;
+  background: var(--green);
+  color: #0a1f16;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.transcript-send-btn:not(:disabled):hover {
+  background: #2bb587;
+}
+
+.transcript-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .transcript-hint {
   color: var(--muted);
   font-size: 13px;
