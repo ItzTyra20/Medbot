@@ -46,17 +46,36 @@ export const EMERGENCY_PATTERNS: RegExp[] = [
   /\banaphylax/i,
   /\bsevere allergic reaction\b/i,
 
-  // Overdose / self-harm
+  // Overdose / poisoning — an active physical emergency regardless of intent,
+  // so this stays in the 911 bucket rather than the crisis-line bucket below.
   /\boverdose\b/i,
   /\btoo many (pills|tablets|pain ?killers)\b/i,
+];
+
+/**
+ * Suicide and self-harm ideation. Kept separate from EMERGENCY_PATTERNS
+ * above because the right response here is the 988 Suicide & Crisis
+ * Lifeline, not a 911 dispatch — same "don't rely on the model to notice"
+ * reasoning as the rest of this file, mirrored from the backend's
+ * mental_health_crisis rule in safety.ts.
+ */
+export const CRISIS_PATTERNS: RegExp[] = [
   /\bkill myself\b/i,
   /\bsuicid/i,
   /\bwant to die\b/i,
   /\bend my life\b/i,
   /\bhurt myself\b/i,
+  /\bself[- ]harm/i,
+  /\bdon'?t want to (be alive|live)\b/i,
+  /\bno reason to live\b/i,
 ];
 
 export function detectEmergency(text: string): boolean {
   if (!text) return false;
   return EMERGENCY_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+export function detectCrisis(text: string): boolean {
+  if (!text) return false;
+  return CRISIS_PATTERNS.some((pattern) => pattern.test(text));
 }

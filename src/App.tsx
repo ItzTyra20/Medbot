@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { GoogleGenAI, Modality } from "@google/genai";
 import CallUI, { type Message } from "./CallUI";
-import { detectEmergency } from "./emergency";
+import { detectEmergency, detectCrisis } from "./emergency";
 
 type Status = "disconnected" | "connecting" | "listening" | "speaking" | "error";
 
@@ -113,6 +113,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [callSeconds, setCallSeconds] = useState(0);
   const [showEmergencyBanner, setShowEmergencyBanner] = useState(false);
+  const [showCrisisBanner, setShowCrisisBanner] = useState(false);
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const toolStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -320,8 +321,13 @@ export default function App() {
 
               // Deterministic safety net: check the caller's own words as
               // they stream in, independent of how the model responds.
+              // These are independent checks — both banners can show at once
+              // if a turn contains both kinds of language.
               if (detectEmergency(liveUserTextRef.current)) {
                 setShowEmergencyBanner(true);
+              }
+              if (detectCrisis(liveUserTextRef.current)) {
+                setShowCrisisBanner(true);
               }
             }
             if (serverContent?.outputTranscription?.text) {
@@ -367,7 +373,7 @@ export default function App() {
               if (finishedUser) {
                 assessTurn(finishedUser)
                   .then((result) => {
-                    if (result?.emergency) setShowEmergencyBanner(true);
+                    applyAssessResult(result);
                   })
                   .catch(() => {
                     // Backend unreachable — detectEmergency() above still covers this turn.
@@ -511,12 +517,13 @@ export default function App() {
     setMessages((prev) => [...prev, { role: "user", text: trimmed, time }]);
 
     if (detectEmergency(trimmed)) setShowEmergencyBanner(true);
+    if (detectCrisis(trimmed)) setShowCrisisBanner(true);
     assessTurn(trimmed)
       .then((result) => {
-        if (result?.emergency) setShowEmergencyBanner(true);
+        applyAssessResult(result);
       })
       .catch(() => {
-        // Backend unreachable; the client-side detectEmergency check above still covers this turn.
+        // Backend unreachable; the client-side checks above still cover this turn.
       });
 
     sessionRef.current.sendClientContent({
@@ -527,6 +534,26 @@ export default function App() {
 
   function dismissEmergencyBanner() {
     setShowEmergencyBanner(false);
+  }
+
+  function dismissCrisisBanner() {
+    setShowCrisisBanner(false);
+  }
+
+  /**
+   * Routes a backend /api/assess result to the right banner(s). Split out
+   * so both the live-audio turn handler and the typed-message handler stay
+   * in sync rather than duplicating this logic.
+   */
+  function applyAssessResult(result: { emergency?: boolean; matchedRules?: string[] } | undefined) {
+    const matchedRules = result?.matchedRules ?? [];
+    if (matchedRules.includes("mental_health_crisis")) {
+      setShowCrisisBanner(true);
+    }
+    const hasOtherEmergency = matchedRules.some((rule) => rule !== "mental_health_crisis");
+    if (result?.emergency && hasOtherEmergency) {
+      setShowEmergencyBanner(true);
+    }
   }
 
   function toggleMute() {
@@ -567,6 +594,7 @@ export default function App() {
       error={error}
       callSeconds={callSeconds}
       showEmergencyBanner={showEmergencyBanner}
+      showCrisisBanner={showCrisisBanner}
       toolStatus={toolStatus}
       canType={connected}
       onSendTypedMessage={sendTypedMessage}
@@ -574,6 +602,7 @@ export default function App() {
       onEndCall={stop}
       onToggleMute={toggleMute}
       onDismissEmergency={dismissEmergencyBanner}
+      onDismissCrisis={dismissCrisisBanner}
     />
   );
 }
