@@ -94,6 +94,7 @@ type Props = {
   error: string;
   callSeconds: number;
   showEmergencyBanner: boolean;
+  showCrisisBanner: boolean;
   /** Short status text shown while/after Gemini looks something up, e.g.
    * "Checking MedlinePlus for..." Null when nothing is happening. */
   toolStatus: string | null;
@@ -104,6 +105,7 @@ type Props = {
   onEndCall: () => void;
   onToggleMute: () => void;
   onDismissEmergency: () => void;
+  onDismissCrisis: () => void;
 };
 
 export default function CallUI({
@@ -115,6 +117,7 @@ export default function CallUI({
   error,
   callSeconds,
   showEmergencyBanner,
+  showCrisisBanner,
   toolStatus,
   canType,
   onSendTypedMessage,
@@ -122,6 +125,7 @@ export default function CallUI({
   onEndCall,
   onToggleMute,
   onDismissEmergency,
+  onDismissCrisis,
 }: Props) {
   const transcriptRef = useRef<HTMLDivElement>(null);
   const [typedText, setTypedText] = useState("");
@@ -174,6 +178,30 @@ export default function CallUI({
               className="emergency-dismiss-btn"
               onClick={onDismissEmergency}
               aria-label="Dismiss emergency notice"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showCrisisBanner && (
+        <div className="crisis-banner" role="alert" aria-live="assertive">
+          <div className="crisis-banner-text">
+            <strong>You don't have to go through this alone.</strong>
+            <span> Free, confidential support is available right now.</span>
+          </div>
+          <div className="crisis-banner-actions">
+            <a className="crisis-call-btn" href="tel:988">
+              Call 988
+            </a>
+            <a className="crisis-text-btn" href="sms:988">
+              Text 988
+            </a>
+            <button
+              className="crisis-dismiss-btn"
+              onClick={onDismissCrisis}
+              aria-label="Dismiss crisis support notice"
             >
               Dismiss
             </button>

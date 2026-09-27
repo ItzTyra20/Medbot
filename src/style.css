@@ -123,6 +123,76 @@ button:focus-visible {
   }
 }
 
+/* 988 crisis support banner — deliberately calmer than the red 911 banner
+   above (blue, not alarm-red): the tone here should feel supportive, not
+   urgent-and-frightening. */
+.crisis-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--blue-bg);
+  border: 1px solid #3a3f7a;
+  color: #e3e5ff;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+}
+
+.crisis-banner-text {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.crisis-banner-text strong {
+  color: #fff;
+}
+
+.crisis-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.crisis-call-btn,
+.crisis-text-btn {
+  background: var(--blue);
+  color: #0a0e14;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 9px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.crisis-call-btn:hover,
+.crisis-text-btn:hover {
+  background: #a3a9ff;
+}
+
+.crisis-dismiss-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #e3e5ff;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.crisis-dismiss-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 560px) {
+  .crisis-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* Header */
 .topbar {
   display: flex;
