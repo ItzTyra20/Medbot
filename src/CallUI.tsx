@@ -94,6 +94,9 @@ type Props = {
   error: string;
   callSeconds: number;
   showEmergencyBanner: boolean;
+  /** Short status text shown while/after Gemini looks something up, e.g.
+   * "Checking MedlinePlus for..." Null when nothing is happening. */
+  toolStatus: string | null;
   onStartCall: () => void;
   onEndCall: () => void;
   onToggleMute: () => void;

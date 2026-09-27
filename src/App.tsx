@@ -49,6 +49,12 @@ function floatToPcm16Base64(input: Float32Array): string {
  * Gemini can actually decide to invoke mid-conversation, instead of only
  * answering from its own training data.
  */
+// TEMPORARY DEBUG TOOL — trivial, no parameters, matches Google's own
+// minimal example. If saying "turn on the lights" doesn't trigger this,
+// the issue is tool-calling itself for this model/key, not your tool's
+// wording or schema. Remove once diagnosed.
+const turnOnTheLightsTool = { name: "turn_on_the_lights" };
+
 const medicalSearchTool = {
   functionDeclarations: [
     {
@@ -107,6 +113,8 @@ export default function App() {
   const [error, setError] = useState("");
   const [callSeconds, setCallSeconds] = useState(0);
   const [showEmergencyBanner, setShowEmergencyBanner] = useState(false);
+  const [toolStatus, setToolStatus] = useState<string | null>(null);
+  const toolStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sessionRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -127,6 +135,23 @@ export default function App() {
   function setStatusSafe(next: Status) {
     statusRef.current = next;
     setStatus(next);
+  }
+
+  /** Shows the "checking a source" pill. Pass autoHideMs to clear it after
+   * a delay (used once the lookup finishes); omit it while the lookup is
+   * still in flight. */
+  function showToolStatus(text: string, autoHideMs?: number) {
+    if (toolStatusTimeoutRef.current) {
+      clearTimeout(toolStatusTimeoutRef.current);
+      toolStatusTimeoutRef.current = null;
+    }
+    setToolStatus(text);
+    if (autoHideMs) {
+      toolStatusTimeoutRef.current = setTimeout(() => {
+        setToolStatus(null);
+        toolStatusTimeoutRef.current = null;
+      }, autoHideMs);
+    }
   }
 
   function elapsedSeconds(): number {
@@ -191,8 +216,13 @@ export default function App() {
           responseModalities: [Modality.AUDIO],
           inputAudioTranscription: {},
           outputAudioTranscription: {},
+          tools: [
+            medicalSearchTool,
+            { functionDeclarations: [turnOnTheLightsTool] },
+          ],
           systemInstruction:
-            "You are HealthVoice, a friendly general health information assistant. You are not a doctor and do not diagnose, prescribe, or recommend changing medication doses. Ask concise follow-up questions and communicate uncertainty. If a user describes possible emergency symptoms, advise them to contact emergency services immediately. This is a demo, not a substitute for professional medical care. Keep spoken answers concise.",
+            "You are HealthVoice, a friendly general health information assistant. You are not a doctor and do not diagnose, prescribe, or recommend changing medication doses. Ask concise follow-up questions and communicate uncertainty. If a user describes possible emergency symptoms, advise them to contact emergency services immediately. This is a demo, not a substitute for professional medical care. Keep spoken answers concise. " +
+            "Whenever the user names a specific condition, symptom, or medication and wants factual information about it (not just casual conversation), call the search_medical_sources tool before answering, and mention to the user that you checked MedlinePlus. Do this proactively without being asked to look something up.",
         },
         callbacks: {
           onopen: () => {
@@ -200,24 +230,45 @@ export default function App() {
             setStatusSafe("listening");
           },
           onmessage: async (message: any) => {
-             // Gemini decided it wants grounded medical info instead of
+            // Gemini decided it wants grounded medical info instead of
             // answering from memory alone. Run the lookup and hand the
             // result back so it can finish its response with real sources.
             if (message.toolCall?.functionCalls?.length) {
               for (const call of message.toolCall.functionCalls) {
                 if (call.name === "search_medical_sources") {
                   const query = call.args?.query ?? "";
-                  let responsePayload: unknown;
+                  showToolStatus(`🔎 Checking MedlinePlus for "${query}"…`);
+
+                  let responsePayload: any;
                   try {
                     responsePayload = await fetchMedicalSources(query);
+                    const count = Array.isArray(responsePayload?.sources)
+                      ? responsePayload.sources.length
+                      : 0;
+                    showToolStatus(
+                      count > 0
+                        ? `✓ Found ${count} MedlinePlus source${count === 1 ? "" : "s"} on "${query}"`
+                        : `MedlinePlus had no results for "${query}"`,
+                      3000
+                    );
                   } catch {
                     responsePayload = {
                       error: "Medical source lookup is temporarily unavailable.",
                     };
+                    showToolStatus(`MedlinePlus lookup for "${query}" failed`, 3000);
                   }
                   sessionRef.current?.sendToolResponse({
                     functionResponses: [
                       { id: call.id, name: call.name, response: responsePayload },
+                    ],
+                  });
+                } else {
+                  // Any other tool call (e.g. the temporary turn_on_the_lights
+                  // debug tool) just needs a response so the session doesn't
+                  // wait forever — the console.log above is what matters here.
+                  sessionRef.current?.sendToolResponse({
+                    functionResponses: [
+                      { id: call.id, name: call.name, response: { result: "ok" } },
                     ],
                   });
                 }
@@ -401,6 +452,11 @@ export default function App() {
       audioContextRef.current = null;
     }
     nextPlayTimeRef.current = 0;
+    if (toolStatusTimeoutRef.current) {
+      clearTimeout(toolStatusTimeoutRef.current);
+      toolStatusTimeoutRef.current = null;
+    }
+    setToolStatus(null);
     stopCallTimer();
     setStatusSafe("disconnected");
     setIsMuted(false);
@@ -451,6 +507,7 @@ export default function App() {
       error={error}
       callSeconds={callSeconds}
       showEmergencyBanner={showEmergencyBanner}
+      toolStatus={toolStatus}
       onStartCall={start}
       onEndCall={stop}
       onToggleMute={toggleMute}
