@@ -287,7 +287,7 @@ export default function App() {
 
             if (serverContent?.inputTranscription?.text) {
               if (!liveUserTextRef.current) {
-                userTurnStartRef.current = elapsedSeconds();
+                userTurnStartRef.current = Date.now();
               }
               liveUserTextRef.current += serverContent.inputTranscription.text;
               setPendingUser({
@@ -303,7 +303,7 @@ export default function App() {
             }
             if (serverContent?.outputTranscription?.text) {
               if (!liveAssistantTextRef.current) {
-                assistantTurnStartRef.current = elapsedSeconds();
+                assistantTurnStartRef.current = Date.now();
               }
               liveAssistantTextRef.current +=
                 serverContent.outputTranscription.text;
@@ -484,7 +484,7 @@ export default function App() {
     const trimmed = text.trim();
     if (!trimmed || !sessionRef.current) return;
 
-    const time = elapsedSeconds();
+    const time = Date.now();
     setMessages((prev) => [...prev, { role: "user", text: trimmed, time }]);
 
     if (detectEmergency(trimmed)) setShowEmergencyBanner(true);
