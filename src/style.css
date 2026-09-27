@@ -55,7 +55,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 22px;
-  min-height: 100vh;
+  min-height: 70vh;
 }
 
 /* Emergency safety banner */
@@ -191,8 +191,10 @@ button:focus-visible {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 20px;
-  align-items: stretch;
+  align-items: flex;
+  height: 100vh;
   flex: 1;
+  min-height: 0;
 }
 
 @media (max-width: 820px) {
@@ -384,7 +386,7 @@ button:focus-visible {
 .transcript-panel {
   display: flex;
   flex-direction: column;
-  min-height: 460px;
+  min-height: 0;
 }
 
 .transcript-header {
@@ -404,6 +406,7 @@ button:focus-visible {
 
 .transcript-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
